@@ -30,10 +30,10 @@ message = json.dumps(data)
 
 channel.basic_publish(
     exchange='weather',
-    routing_key='',  # o pon una routing key si tu consumer la usa
+    routing_key='',
     body=message,
     properties=pika.BasicProperties(
-        delivery_mode=2  # hace el mensaje persistente
+        delivery_mode=2
     )
 )
 
