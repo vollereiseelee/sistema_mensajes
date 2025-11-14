@@ -2,6 +2,10 @@ import pika
 import json
 import time
 import random
+from prometheus_client import start_http_server, Counter
+
+messages_sent = Counter("weather_messages_sent_total", "Mensajes enviados al exchange de RabbitMQ")
+producer_errors = Counter("weather_producer_errors_total", "Errores del producer al enviar mensajes")
 
 def connect_rabbitmq():
     while True:
@@ -11,6 +15,10 @@ def connect_rabbitmq():
         except:
             print("Esperando RabbitMQ...")
             time.sleep(3)
+
+
+start_http_server(8001)
+print("Servidor de métricas del PRODUCER escuchando en :8001")
 
 connection = connect_rabbitmq()
 channel = connection.channel()
@@ -26,11 +34,18 @@ while True:
     }
 
     message = json.dumps(data)
-    channel.basic_publish(
-        exchange='weather',
-        routing_key='weather_key',
-        body=message,
-        properties=pika.BasicProperties(delivery_mode=2)
-    )
-    print(f"Publicado: {message}")
+    try:
+        channel.basic_publish(
+            exchange='weather',
+            routing_key='weather_key',
+            body=message,
+            properties=pika.BasicProperties(delivery_mode=2)
+        )
+        messages_sent.inc()  # métrica
+        print(f"Publicado: {message}")
+
+    except Exception as e:
+        print("Error al publicar mensaje:", e)
+        producer_errors.inc()
+
     time.sleep(5)

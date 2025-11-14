@@ -3,6 +3,12 @@ import psycopg2
 import json
 import time
 
+from prometheus_client import start_http_server, Counter
+
+# Métricas
+messages_received = Counter("weather_messages_received_total", "Mensajes recibidos desde RabbitMQ")
+db_errors = Counter("weather_db_errors_total", "Errores al guardar datos en PostgreSQL")
+
 def connect_postgres():
     while True:
         try:
@@ -19,25 +25,39 @@ def connect_postgres():
 def connect_rabbitmq():
     while True:
         try:
-            connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
+            connection = pika.BlockingConnection(
+                pika.ConnectionParameters('rabbitmq')
+            )
             return connection
         except:
             print("Esperando RabbitMQ...")
             time.sleep(3)
 
 def callback(ch, method, properties, body):
-    data = json.loads(body)
-    print(f"Recibido: {data}")
-    conn = connect_postgres()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO weather_logs (station_id, temperature, humidity, pressure) VALUES (%s, %s, %s, %s)",
-        (data["station_id"], data["temperature"], data["humidity"], data["pressure"])
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
+    messages_received.inc()  # Métrica
+
+    try:
+        data = json.loads(body)
+        print(f"Recibido: {data}")
+
+        conn = connect_postgres()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO weather_logs (station_id, temperature, humidity, pressure) VALUES (%s, %s, %s, %s)",
+            (data["station_id"], data["temperature"], data["humidity"], data["pressure"])
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        print("Error:", e)
+        db_errors.inc()
+
     ch.basic_ack(delivery_tag=method.delivery_tag)
+
+start_http_server(8000)
+print("Servidor de métricas Prometheus escuchando en :8000")
 
 connection = connect_rabbitmq()
 channel = connection.channel()

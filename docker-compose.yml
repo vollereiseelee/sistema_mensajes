@@ -1,4 +1,4 @@
-version: "3.9" 
+version: "3.9"
 
 services:
   rabbitmq:
@@ -9,6 +9,8 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_prometheus true"
 
   postgres:
     image: postgres:15
@@ -28,17 +30,42 @@ services:
     container_name: sistemademensajes-producer-1
     volumes:
       - ./producer:/app
+    ports:
+      - "8001:8001"
     depends_on:
       - rabbitmq
 
   consumer:
     build: ./consumer
     container_name: sistemademensajes-consumer-1
+    ports:
+      - "8000:8000"
     depends_on:
       - rabbitmq
       - postgres
 
+  prometheus:
+    image: prom/prometheus
+    container_name: sistemademensajes-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - producer
+      - consumer
+
+  grafana:
+    image: grafana/grafana
+    container_name: sistemademensajes-grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana_data:/var/lib/grafana
+
 volumes:
   rabbitmq_data:
   postgres_data:
-
+  grafana_data:
