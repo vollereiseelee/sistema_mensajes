@@ -7,7 +7,7 @@
 4. [System Components](#system-components)
 5. [Architecture](#architecture)
 6. [Metrics & Monitoring](#metrics--monitoring)
-7. [Equipo de desarrollo](#Equipo-Desarrollo)
+7. [Development team](#Development-team)
 
 ---
 
@@ -115,7 +115,7 @@ Prometheus captura datos como:
 - `messages_per_second`  
 - `consumer_memory_usage_bytes`  
 - `postgres_insert_errors_total`
-## Equipo de Desarrollo
+## Development team
 - Sebastian Valencia Montesino  
 - Andrés Hernández Viaña  
 - William Cuello Haydar  
